@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Chassis UI — Models</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      background: #18181b;
+      color: #e4e4e7;
+      line-height: 1.6;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .main-container {
+      display: flex;
+      height: calc(100vh - 80px);
+      background: #232329;
+      border-radius: 0;
+      margin: 0 1rem;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.25);
+      overflow: visible;
+      position: relative;
+    }
+
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #232329;
+      padding: 0.17rem 1.5rem;
+      border-radius: 0;
+      box-shadow: none;
+      margin-bottom: 0.5rem;
+      position: relative;
+    }
+
+    .header-title {
+      color: #e4e4e7;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.17rem;
+      padding: 0.17rem 1.5rem;
+      background: #232329;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .user-menu {
+      position: relative;
+    }
+
+    .user-menu-btn {
+      background: none;
+      border: none;
+      color: #a1a1aa;
+      cursor: pointer;
+      padding: 0;
+      font-size: 1.5rem;
+      transition: transform 0.2s ease;
+    }
+
+    .user-menu-btn:hover {
+      color: #fff;
+    }
+
+    .user-menu-dropdown {
+      position: absolute;
+      right: 0;
+      top: 100%;
+      background: #232329;
+      border: 1px solid #27272a;
+      border-radius: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      padding: 0.5rem;
+      z-index: 1000;
+      display: none;
+      min-width: 120px;
+      margin-top: 0.5rem;
+      color: #e4e4e7;
+    }
+
+    .user-menu-dropdown.show {
+      display: block;
+    }
+
+    .menu-item {
+      display: block;
+      width: 100%;
+      padding: 0.5rem 1rem;
+      background: none;
+      border: none;
+      color: #e4e4e7;
+      text-align: left;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background-color 0.2s ease;
+    }
+
+    .menu-item:hover {
+      background-color: #313136;
+      color: #fff;
+    }
+
+    .user-menu-dropdown #logoutBtn {
+      position: static;
+      bottom: auto;
+      right: auto;
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: #a21caf;
+      color: #fff;
+      border: 1px solid #a21caf;
+      border-radius: 0;
+      padding: 0.5rem 1rem;
+      font-size: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      box-shadow: none;
+    }
+
+    .user-menu-dropdown #logoutBtn:hover {
+      background: #701a75;
+      color: #fff;
+    }
+
+    .content-area {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+      background: #18181b;
+    }
+
+    .models-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .models-title {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #e4e4e7;
+    }
+
+    .add-model-btn {
+      background: #27272a;
+      color: #e4e4e7;
+      border: 1px solid #27272a;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .add-model-btn:hover {
+      background: #313136;
+      color: #fff;
+    }
+
+    .models-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .model-card {
+      background: #232329;
+      border: 1px solid #27272a;
+      border-radius: 0;
+      padding: 1.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .model-card:hover {
+      border-color: #313136;
+      transform: translateY(-2px);
+    }
+
+    .model-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    .model-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #e4e4e7;
+      margin-bottom: 0.5rem;
+    }
+
+    .model-description {
+      color: #a1a1aa;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+
+    .model-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .action-btn {
+      background: none;
+      border: 1px solid #27272a;
+      color: #a1a1aa;
+      padding: 0.4rem 0.8rem;
+      border-radius: 0;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: #313136;
+      color: #fff;
+    }
+
+    .action-btn.edit {
+      border-color: #667eea;
+      color: #667eea;
+    }
+
+    .action-btn.edit:hover {
+      background: #667eea;
+      color: #fff;
+    }
+
+    .action-btn.delete {
+      border-color: #a21caf;
+      color: #a21caf;
+    }
+
+    .action-btn.delete:hover {
+      background: #a21caf;
+      color: #fff;
+    }
+
+    .endpoints-section {
+      margin-top: 1rem;
+    }
+
+    .endpoints-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e4e4e7;
+      margin-bottom: 0.75rem;
+    }
+
+    .endpoint-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 0;
+      margin-bottom: 0.5rem;
+    }
+
+    .endpoint-info {
+      flex: 1;
+    }
+
+    .endpoint-url {
+      color: #e4e4e7;
+      font-size: 0.9rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .endpoint-weight {
+      color: #a1a1aa;
+      font-size: 0.8rem;
+    }
+
+    .endpoint-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    .status-indicator.inactive {
+      background: #6b7280;
+    }
+
+    .add-endpoint-btn {
+      background: #27272a;
+      color: #e4e4e7;
+      border: 1px solid #27272a;
+      padding: 0.5rem 1rem;
+      border-radius: 0;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s ease;
+      margin-top: 0.5rem;
+    }
+
+    .add-endpoint-btn:hover {
+      background: #313136;
+      color: #fff;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: #232329;
+      border: 1px solid #27272a;
+      border-radius: 0;
+      padding: 2rem;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #e4e4e7;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #a1a1aa;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .close-btn:hover {
+      color: #fff;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-label {
+      display: block;
+      color: #e4e4e7;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.75rem;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 0;
+      color: #e4e4e7;
+      font-size: 1rem;
+      transition: border-color 0.2s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .form-textarea {
+      width: 100%;
+      padding: 0.75rem;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 0;
+      color: #e4e4e7;
+      font-size: 1rem;
+      resize: vertical;
+      min-height: 100px;
+      transition: border-color 0.2s ease;
+    }
+
+    .form-textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .endpoints-container {
+      margin-top: 1rem;
+    }
+
+    .endpoint-form {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 0;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .endpoint-form-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .endpoint-form-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .endpoint-form-group {
+      flex: 1;
+    }
+
+    .endpoint-form-group.weight {
+      flex: 0 0 100px;
+    }
+
+    .remove-endpoint-btn {
+      background: #a21caf;
+      color: #fff;
+      border: 1px solid #a21caf;
+      padding: 0.5rem 1rem;
+      border-radius: 0;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s ease;
+    }
+
+    .remove-endpoint-btn:hover {
+      background: #701a75;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 0;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      border: 1px solid;
+    }
+
+    .btn-secondary {
+      background: #27272a;
+      color: #e4e4e7;
+      border-color: #27272a;
+    }
+
+    .btn-secondary:hover {
+      background: #313136;
+      color: #fff;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: #fff;
+      border-color: #667eea;
+    }
+
+    .btn-primary:hover {
+      background: #5a67d8;
+    }
+
+    .btn-danger {
+      background: #a21caf;
+      color: #fff;
+      border-color: #a21caf;
+    }
+
+    .btn-danger:hover {
+      background: #701a75;
+    }
+
+    #status {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      padding: 0.5rem 1rem;
+      background: #2d3748;
+      color: #e2e8f0;
+      border-radius: 0;
+      font-size: 0.8rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 1001;
+    }
+
+    #status.show {
+      opacity: 1;
+    }
+
+    #status.success {
+      background: #10b981;
+      color: #fff;
+    }
+
+    #status.error {
+      background: #ef4444;
+      color: #fff;
+    }
+
+    .back-btn {
+      background: #27272a;
+      color: #e4e4e7;
+      border: 1px solid #27272a;
+      padding: 0.5rem 1rem;
+      border-radius: 0;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
+      margin-right: 1rem;
+    }
+
+    .back-btn:hover {
+      background: #313136;
+      color: #fff;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header-bar">
+    <div class="header-title">Chassis UI — Models</div>
+    <div class="user-menu">
+      <button id="userMenuBtn" class="user-menu-btn">👨</button>
+      <div id="userMenuDropdown" class="user-menu-dropdown">
+        <button id="settingsBtn" class="menu-item">Settings</button>
+        <button id="logoutBtn" class="menu-item">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <div class="content-area">
+      <div class="models-header">
+        <div>
+          <a href="/chats" class="back-btn">← Back to Chat</a>
+          <h1 class="models-title">Models</h1>
+        </div>
+        <button id="addModelBtn" class="add-model-btn">+ Add Model</button>
+      </div>
+
+      <div id="modelsGrid" class="models-grid">
+        <!-- Models will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Model Modal -->
+  <div id="modelModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle" class="modal-title">Add Model</h2>
+        <button class="close-btn" id="closeModal">&times;</button>
+      </div>
+      <form id="modelForm">
+        <div class="form-group">
+          <label for="modelName" class="form-label">Model Name</label>
+          <input type="text" id="modelName" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label for="modelShortDescription" class="form-label">Short Description</label>
+          <input type="text" id="modelShortDescription" class="form-input" maxlength="120" placeholder="A short summary (max 120 chars)" required>
+        </div>
+        <div class="form-group">
+          <label for="modelLongDescription" class="form-label">Long Description</label>
+          <textarea id="modelLongDescription" class="form-textarea" placeholder="Detailed description, features, use cases, etc."></textarea>
+        </div>
+        
+        <div class="endpoints-container">
+          <h3 class="endpoints-title">Model Endpoints</h3>
+          <div id="endpointsList">
+            <!-- Endpoint forms will be added here -->
+          </div>
+          <button type="button" id="addEndpointBtn" class="add-endpoint-btn">+ Add Endpoint</button>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelBtn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="saveBtn" class="btn btn-primary">Save Model</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Delete Model</h2>
+        <button class="close-btn" id="closeDeleteModal">&times;</button>
+      </div>
+      <p style="color: #e4e4e7; margin-bottom: 2rem;">Are you sure you want to delete this model? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button id="cancelDeleteBtn" class="btn btn-secondary">Cancel</button>
+        <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="status"></div>
+
+  <script src="/static/models.js"></script>
+</body>
+
+</html>

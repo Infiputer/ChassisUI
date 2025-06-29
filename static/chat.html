@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Chassis UI — Chats</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      background: #18181b;
+      color: #e4e4e7;
+      line-height: 1.6;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Removed general h2 rule to prevent interference with markdown headings */
+
+    .main-container {
+      display: flex;
+      height: calc(100vh - 80px);
+      background: #232329;
+      border-radius: 0;
+      margin: 0 1rem;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.25);
+      overflow: visible;
+      position: relative;
+    }
+
+    /* 1) Always fixed so we don't yank it out of the flow on toggle */
+    #convos {
+      position: fixed;
+      left: 1rem;
+      top: 80px;
+      height: calc(100vh - 80px);
+      width: 280px;
+      background: #232329;
+      border-right: 1px solid #27272a;
+      padding: 1rem 0;
+      overflow-y: auto;
+      transform: translateX(0);
+      opacity: 1;
+      transition:
+        transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 2;
+    }
+
+    /* 2) Only transform & opacity change when closed */
+    #convos.sidebar-closed {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+
+    /* 3) Scrollbar styling (unchanged) */
+    #convos::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #convos::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #convos::-webkit-scrollbar-thumb {
+      background: #4a5568;
+      border-radius: 3px;
+    }
+
+    #convos::-webkit-scrollbar-thumb:hover {
+      background: #718096;
+    }
+
+    /* Firefox */
+    #convos,
+    #messages {
+      scrollbar-color: #4a5568 transparent;
+      scrollbar-width: thin;
+    }
+
+    /* Chat panel sits to the right and shifts when sidebar closes */
+    #chat {
+      display: flex;
+      flex-direction: column;
+      background: #18181b;
+      margin-left: 280px;
+      width: calc(100% - 280px);
+      transition: margin-left 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+        width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* When sidebar is hidden, expand chat to full width */
+    body:has(#convos.sidebar-closed) #chat {
+      margin-left: 0;
+      width: 100%;
+    }
+
+    /* Make scrollbars transparent */
+    #convos::-webkit-scrollbar-track,
+    #convos::-webkit-scrollbar-thumb,
+    #messages::-webkit-scrollbar-track,
+    #messages::-webkit-scrollbar-thumb {
+      background: transparent !important;
+    }
+
+    /* For Firefox */
+    #convos,
+    #messages {
+      scrollbar-color: #4a5568 transparent;
+      scrollbar-width: thin;
+    }
+
+    .new-chat-btn {
+      display: block;
+      width: calc(100% - 2rem);
+      margin: 0 1rem 1rem 1rem;
+      padding: 0.75rem 1rem;
+      background: #27272a;
+      color: #e4e4e7;
+      text-decoration: none;
+      border-radius: 0;
+      text-align: center;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      border: 1px solid #27272a;
+      cursor: pointer;
+    }
+
+    .new-chat-btn:hover {
+      background: #313136;
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: none;
+    }
+
+    .convo-row {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      margin: 0;
+      border-radius: 0;
+      border-bottom: 1px solid #232329;
+      transition: all 0.2s ease;
+    }
+
+    .convo-row:hover {
+      background: #2d3748;
+    }
+
+    .convo-row a {
+      flex: 1;
+      color: #e4e4e7;
+      text-decoration: none;
+      font-size: 1rem;
+      padding: 0.5rem 0;
+      border-radius: 0;
+      transition: color 0.2s ease;
+      font-weight: 500;
+    }
+
+    .convo-row a:hover {
+      color: #ffffff;
+    }
+
+    .convo-row a.selected {
+      color: #a1a1aa;
+      font-weight: 600;
+    }
+
+    .rename-btn {
+      background: none;
+      border: none;
+      color: #71717a;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 0;
+      transition: all 0.2s ease;
+      font-size: 1rem;
+    }
+
+    .rename-btn:hover {
+      color: #fff;
+      background: #232329;
+    }
+
+    #chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #18181b;
+      position: relative;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #messages {
+      flex: 1;
+      padding: 1rem 0.5rem 1rem 2rem;
+      overflow-y: auto;
+      background: #000000;
+      display: flex;
+      flex-direction: column;
+
+    }
+
+    .msg {
+      margin: 0.5rem 0;
+      padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+      border-radius: 0;
+      background: none;
+      border: none;
+      color: #e4e4e7;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .msg.user {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      background: none;
+      border: none;
+      text-align: right;
+      margin-left: 0;
+      margin-right: 0;
+      max-width: 70%;
+      box-shadow: none;
+      align-self: flex-end;
+    }
+
+    .msg.user .inner-bubble {
+      display: inline-block;
+      background: #232329;
+      border: 1px solid #27272a;
+      border-radius: 40px;
+      padding: 0.5rem 1rem;
+      color: #e4e4e7;
+      font-size: 1rem;
+      font-weight: 400;
+      box-shadow: none;
+      margin: 0;
+      text-align: right;
+      max-width: 100%;
+      word-break: break-word;
+    }
+
+    .msg.user .controls-container {
+      display: flex;
+      flex-direction: row;
+      justify-content: flex-end;
+      align-items: center;
+      width: 100%;
+      margin-top: 0.2rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      background: none;
+    }
+
+    .msg.user:hover .controls-container {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .branch-group {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      width: auto;
+      margin: 0 0 0 auto;
+      padding: 0;
+      background: none;
+    }
+
+    .edit-btn,
+    .branch-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #232329;
+      color: #a1a1aa;
+      border: 1px solid #27272a;
+      border-radius: 0;
+      padding: 0.4rem 0.6rem;
+      /* slightly tweaked padding */
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .edit-btn:hover,
+    .branch-arrow:hover {
+      background: #313136;
+      color: #fff;
+    }
+
+    .branch-counter {
+      font-size: 1.2rem;
+      color: #71717a;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 40px;
+      /* ensure consistent width */
+      text-align: center;
+    }
+
+    /* ── INPUT BOXES & FOOTER ────────────────────────────────────────── */
+    /* ── BOTTOM INPUT & SEND BUTTON ───────────────────────────────── */
+
+    /* ── FULL-WIDTH INPUT + BUTTON ───────────────────────────────────── */
+
+    .input-container {
+      display: flex;
+      width: 100%;
+      padding: 0;
+      background: #232329;
+      border-top: 1px solid #27272a;
+    }
+
+    #promptForm {
+      display: flex;
+      align-items: flex-end;
+      /* align to bottom to remove gap */
+      gap: 0.5rem;
+      /* space between prompt and button */
+      flex: 1;
+      /* fill its parent .input-container */
+      flex-wrap: nowrap; 
+    }
+
+    #prompt {
+      min-height: 2.5em;
+      max-height: 30vh;
+      overflow-y: auto;
+      resize: none;
+      outline: none;
+      border: 1px solid #27272a;
+      background: #18181b;
+      border-radius: 0;
+      color: #e4e4e7;
+      font-size: 1rem;
+      font-family: inherit;
+      padding: 0.5rem 1rem;
+      box-sizing: border-box;
+      flex: 1;
+      margin: 0;
+      white-space: pre-wrap;
+      min-width: 0;
+    }
+
+    #prompt:empty:before {
+      content: attr(data-placeholder);
+      color: #71717a;
+      pointer-events: none;
+      font-style: normal;
+      font-size: 0.9rem;
+    }
+
+    button[type="submit"] {
+      flex: 0 0 auto;
+      /* don't grow or shrink, stay at natural size */
+      padding: 0.5rem 1rem;
+      background: #27272a;
+      color: #e4e4e7;
+      border: 1px solid #27272a;
+      border-radius: 0;
+      font-weight: 500;
+      font-size: 1.1rem;
+      cursor: pointer;
+      white-space: nowrap;
+      box-sizing: border-box;
+      width: auto;
+      transition: all 0.2s ease;
+      align-self: flex-end;
+      min-height: 2.5em;
+    }
+
+    button[type="submit"]:hover {
+      background: #313136;
+      color: #fff;
+    }
+
+    /* Stop button styling when streaming */
+    button[type="submit"].stopping {
+      background: #a21caf;
+      color: #fff;
+      border: 1px solid #a21caf;
+      animation: none;
+    }
+
+    #logoutBtn {
+      /* Remove fixed positioning - now in dropdown */
+      padding: 0.5rem 1rem;
+      background: none;
+      color: #e4e4e7;
+      border: none;
+      border-radius: 0;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: none;
+    }
+
+    #logoutBtn:hover {
+      background-color: #2d3748;
+      transform: none;
+      box-shadow: none;
+    }
+
+    #status {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      padding: 0.5rem 1rem;
+      background: #2d3748;
+      color: #e2e8f0;
+      border-radius: 0;
+      font-size: 0.8rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    #status.show {
+      opacity: 1;
+    }
+
+    #status.processing {
+      background: #667eea;
+      color: #fff;
+    }
+
+    #status.info {
+      background: #2d3748;
+      color: #e2e8f0;
+    }
+
+    .streaming-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #667eea;
+      border-radius: 50%;
+      margin-right: 0.5rem;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+
+      100% {
+        opacity: 1;
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #a0aec0;
+      font-style: italic;
+      padding: 2rem;
+    }
+
+    hr {
+      border: none;
+      height: 1px;
+      background: #2d3748;
+      margin: 0.5rem 1rem;
+    }
+
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #232329;
+      padding: 0.17rem 1.5rem;
+      border-radius: 0;
+      box-shadow: none;
+      margin-bottom: 0.5rem;
+      position: relative;
+    }
+
+    .header-bar h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #fff;
+      background: none;
+      box-shadow: none;
+      padding: 0;
+    }
+
+    .header-title {
+      color: #e4e4e7;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.17rem;
+      padding: 0.17rem 1.5rem;
+      background: #232329;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .msg.assistant {
+      background: transparent !important;
+      border: 1px solid #27272a;
+      border-radius: 0;
+      color: #e4e4e7;
+      display: inline-block;
+      align-self: flex-start;
+      margin-right: auto;
+      margin-left: 0;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      font-weight: 400;
+      box-shadow: none;
+      max-width: 70%;
+      min-width: 0;
+      word-break: break-word;
+      text-align: left;
+    }
+
+    .edit-inline-input {
+      display: inline-block;
+      background: #232329;
+      color: #e4e4e7;
+      font-size: 1rem;
+      font-weight: 500;
+      margin: 0;
+      text-align: right;
+      max-width: 100%;
+      width: 100%;
+      word-break: break-word;
+      outline: none;
+      font-family: inherit;
+      border: 1px solid #27272a;
+      white-space: pre-wrap;
+      min-height: 1.2em;
+      padding: 0.5rem 1rem;
+      border-radius: 0;
+      transition: background-color 0.2s ease;
+    }
+
+    .edit-inline-input:focus {
+      background: #18181b;
+      border: 1px solid #a1a1aa;
+    }
+
+    .user-menu {
+      position: relative;
+    }
+
+    .user-menu-btn {
+      background: none;
+      border: none;
+      color: #a1a1aa;
+      cursor: pointer;
+      padding: 0;
+      font-size: 1.5rem;
+      transition: transform 0.2s ease;
+    }
+
+    .user-menu-btn:hover {
+      color: #fff;
+    }
+
+    .user-menu-dropdown {
+      position: absolute;
+      right: 0;
+      top: 100%;
+      background: #232329;
+      border: 1px solid #27272a;
+      border-radius: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      padding: 0.5rem;
+      z-index: 1000;
+      display: none;
+      min-width: 120px;
+      margin-top: 0.5rem;
+      color: #e4e4e7;
+    }
+
+    .user-menu-dropdown.show {
+      display: block;
+    }
+
+    .menu-item {
+      display: block;
+      width: 100%;
+      padding: 0.5rem 1rem;
+      background: none;
+      border: none;
+      color: #e4e4e7;
+      text-align: left;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background-color 0.2s ease;
+    }
+
+    .menu-item:hover {
+      background-color: #313136;
+      color: #fff;
+    }
+
+    /* Ensure logout button in dropdown is properly styled */
+    .user-menu-dropdown #logoutBtn {
+      position: static;
+      bottom: auto;
+      right: auto;
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: #a21caf;
+      color: #fff;
+      border: 1px solid #a21caf;
+      border-radius: 0;
+      padding: 0.5rem 1rem;
+      font-size: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      box-shadow: none;
+    }
+
+    .user-menu-dropdown #logoutBtn:hover {
+      background: #701a75;
+      color: #fff;
+    }
+
+    /* Code block styling for proper text wrapping */
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+      overflow-x: auto;
+      background: #18181b !important;
+      border-radius: 0;
+      padding: 1rem;
+      margin: 0.5rem 0;
+      border: 1px solid #27272a !important;
+      color: #e4e4e7 !important;
+    }
+
+    code {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .hljs {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+    }
+
+    /* Markdown heading styles for chat messages */
+    .msg h1,
+    .msg h2,
+    .msg h3,
+    .msg h4,
+    .msg h5,
+    .msg h6 {
+      color: #e4e4e7;
+      font-weight: 600;
+      margin: 1rem 0 0.5rem 0;
+      padding: 0;
+      background: none;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .msg h1 {
+      font-size: 1.8rem;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 0.5rem;
+    }
+
+    .msg h2 {
+      font-size: 1.5rem;
+      border-bottom: 1px solid #4a5568;
+      padding-bottom: 0.3rem;
+    }
+
+    .msg h3 {
+      font-size: 1.3rem;
+    }
+
+    .msg h4 {
+      font-size: 1.1rem;
+    }
+
+    .msg h5 {
+      font-size: 1rem;
+    }
+
+    .msg h6 {
+      font-size: 0.9rem;
+    }
+
+    /* Markdown table styling */
+    .msg table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1rem 0;
+      background: transparent;
+      border-radius: 0;
+      overflow: hidden;
+    }
+
+    .msg th,
+    .msg td {
+      border: none;
+      border-bottom: 1px solid #27272a;
+      padding: 0.5rem;
+      text-align: left;
+      font-size: 0.8rem;
+      color: #a1a1aa;
+    }
+
+    .msg th {
+      background: transparent;
+      font-weight: 600;
+      color: #e4e4e7;
+    }
+
+    .msg td {
+      background: transparent;
+      color: #e4e4e7;
+    }
+
+    .msg tr:nth-child(even) td {
+      background: transparent;
+    }
+
+    .msg tr:last-child td {
+      border-bottom: none;
+    }
+
+    #openSidebarBtn {
+      position: relative;
+      margin-right: 1rem;
+      background: #232329;
+      border: 1px solid #27272a;
+      color: #a1a1aa;
+      font-size: 1.5rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      z-index: 3;
+      cursor: pointer;
+      display: inline-block;
+      transition: opacity 0.2s;
+    }
+
+    /* Alternative: show button when sidebar is closed using body selector */
+    body:has(#convos.sidebar-closed) #openSidebarBtn {
+      display: inline-block;
+    }
+
+    /* Hide sidebar when closed and remove from layout */
+    #convos.sidebar-closed {
+      position: fixed;
+      left: 1rem;
+      top: 80px;
+      height: calc(100vh - 80px);
+      width: 280px;
+      flex: 0 0 0 !important;
+      min-width: 0 !important;
+      max-width: 0 !important;
+      transform: translateX(-100%);
+      opacity: 0;
+      z-index: 10;
+    }
+
+    /* Expand chat area when sidebar is closed (correct sibling selector) */
+    #convos.sidebar-closed~#chat {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    /* Alternative approach: expand chat area when sidebar is closed */
+    body:has(#convos.sidebar-closed) .main-container #chat {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    /* Fallback: ensure chat area takes full width */
+    .main-container #chat {
+      flex: 1;
+      width: auto;
+    }
+
+    /* Force assistant messages to have a transparent background and no border */
+    .msg.assistant {
+      background: transparent !important;
+      border: none !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header-bar">
+    <button id="openSidebarBtn" title="Open sidebar">☰</button>
+    <div class="header-title">Chassis UI — Chats</div>
+    <div class="user-menu">
+      <button id="userMenuBtn" class="user-menu-btn">👨</button>
+      <div id="userMenuDropdown" class="user-menu-dropdown">
+        <button id="settingsBtn" class="menu-item">Settings</button>
+        <button id="modelsBtn" class="menu-item">Models</button>
+        <button id="logoutBtn" class="menu-item">Logout</button>
+      </div>
+    </div>
+  </div>
+  <div class="main-container">
+    <div id="convos">
+      <!-- conversations sidebar content rendered by JS -->
+    </div>
+    <div id="chat">
+      <div id="messages"></div>
+      <div class="input-container">
+        <form id="promptForm">
+          <div id="prompt" contenteditable="true" data-placeholder="Type your message..." autocomplete="off"
+            spellcheck="true"></div>
+          <button type="submit">⬆️</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div id="status"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/monokai.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+  <script src="/static/chat.js"></script>
+</body>
+
+</html>

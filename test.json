@@ -1,0 +1,1 @@
+{"model":"Test","messages":[{"role":"user","content":"Hello"},{"role":"assistant","content":"Hi there!"},{"role":"user","content":"How are you?"},{"role":"assistant","content":"I'm doing well!"},{"role":"user","content":"What's the weather like?"}],"generate_title":true}

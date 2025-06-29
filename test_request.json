@@ -1,0 +1,10 @@
+{
+  "model": "Test",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Why is the sky blue?"
+    }
+  ],
+  "generate_title": true
+} 
