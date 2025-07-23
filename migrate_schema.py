@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 """
 Migration script to update models table schema
 """
@@ -9,7 +10,7 @@ import asyncpg
 async def migrate_schema():
     # Connect to database
     pool = await asyncpg.create_pool(
-        "postgresql://chassis_user:randomsecurepassword45219@localhost/chassis_ui"
+        os.environ.get("DATABASE_URL", "postgresql://chassis_user:@localhost/chassis_ui")
     )
     
     async with pool.acquire() as conn:

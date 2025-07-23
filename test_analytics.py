@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 """
 Test script for analytics functionality
 """
@@ -14,7 +15,7 @@ async def test_analytics():
         host='localhost',
         port=5432,
         user='postgres',
-        password='postgres',
+        password=os.environ.get("DB_PASSWORD", ""),
         database='chassis_ui'
     )
     

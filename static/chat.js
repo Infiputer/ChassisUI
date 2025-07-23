@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
-    console.log(hljs);
+    console.log('[CHAT.JS] DOM Content Loaded - Initializing chat application');
+    console.log('[CHAT.JS] Highlight.js available:', !!hljs);
+    
     marked.setOptions({
         breaks: true,
         silent: true
@@ -13,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
     marked.use({
         renderer: {
             code(code) {
+                console.log('[CHAT.JS] Rendering code block with language:', code['lang']);
                 const validLang = hljs.getLanguage(code['lang']) ? code['lang'] : 'plaintext';
                 const highlighted = hljs.highlight(code['text'], { language: validLang }).value;
                 return `<pre><code class="hljs language-${validLang}">${highlighted}</code></pre>`;
@@ -38,6 +41,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let backgroundProcessingCheck = null;
     let resumeStreamingCompleted = false; // Flag to track if resume streaming completed successfully
 
+    console.log('[CHAT.JS] Global variables initialized');
+
     const convosDiv = document.getElementById("convos");
     const messagesDiv = document.getElementById("messages");
     const promptForm = document.getElementById("promptForm");
@@ -49,19 +54,38 @@ document.addEventListener('DOMContentLoaded', function () {
     const userMenuDropdown = document.getElementById("userMenuDropdown");
     const settingsBtn = document.getElementById("settingsBtn");
     const openSidebarBtn = document.getElementById("openSidebarBtn");
+    
+    console.log('[CHAT.JS] DOM elements found:', {
+        convosDiv: !!convosDiv,
+        messagesDiv: !!messagesDiv,
+        promptForm: !!promptForm,
+        promptInput: !!promptInput,
+        logoutBtn: !!logoutBtn,
+        statusEl: !!statusEl,
+        sendButton: !!sendButton,
+        userMenuBtn: !!userMenuBtn,
+        userMenuDropdown: !!userMenuDropdown,
+        settingsBtn: !!settingsBtn,
+        openSidebarBtn: !!openSidebarBtn
+    });
+    
     if (openSidebarBtn) {
+        console.log('[CHAT.JS] Setting up sidebar toggle functionality');
         openSidebarBtn.onclick = function() {
             const isClosing = !convosDiv.classList.contains('sidebar-closed');
+            console.log('[CHAT.JS] Sidebar toggle clicked, isClosing:', isClosing);
             convosDiv.classList.toggle('sidebar-closed');
             
             if (isClosing) {
                 // When closing, delay pointer-events: none to allow animation to be visible
                 setTimeout(() => {
                     convosDiv.style.pointerEvents = 'none';
+                    console.log('[CHAT.JS] Sidebar pointer events disabled after animation');
                 }, 600); // Match the opacity transition duration
             } else {
                 // When opening, immediately enable pointer events
                 convosDiv.style.pointerEvents = '';
+                console.log('[CHAT.JS] Sidebar pointer events enabled');
             }
         };
     }
@@ -330,26 +354,41 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- Auth ---
     async function autoLogin() {
+        console.log('[CHAT.JS] Auto-login attempt started');
         try {
+            console.log('[CHAT.JS] Fetching auto-login endpoint');
             const res = await fetch("/auto-login");
-            if (!res.ok) throw new Error("Not logged in");
+            if (!res.ok) {
+                console.log('[CHAT.JS] Auto-login failed, status:', res.status);
+                throw new Error("Not logged in");
+            }
             const data = await res.json();
             accessToken = data.access_token;
+            console.log('[CHAT.JS] Auto-login successful, access token obtained');
             await loadConversations();
             handleInitialRoute();
-        } catch {
+        } catch (error) {
+            console.log('[CHAT.JS] Auto-login error, redirecting to login:', error.message);
             window.location = "/";
         }
     }
 
     logoutBtn.onclick = async () => {
-        await fetch("/logout", { method: "POST" });
-        window.location = "/";
+        console.log('[CHAT.JS] Logout button clicked');
+        try {
+            await fetch("/logout", { method: "POST" });
+            console.log('[CHAT.JS] Logout successful, redirecting to login');
+            window.location = "/";
+        } catch (error) {
+            console.log('[CHAT.JS] Logout error:', error.message);
+            window.location = "/";
+        }
     };
 
     // Add beforeunload event listener to warn user when closing tab during streaming
     window.addEventListener('beforeunload', function(e) {
         if (isStreaming) {
+            console.log('[CHAT.JS] Beforeunload event - streaming in progress, showing warning');
             e.preventDefault();
             e.returnValue = 'You have an active conversation. Are you sure you want to leave?';
             return e.returnValue;
@@ -359,21 +398,32 @@ document.addEventListener('DOMContentLoaded', function () {
     // Add pagehide event listener to detect when page is being unloaded
     window.addEventListener('pagehide', function(e) {
         if (isStreaming) {
-            console.log('Page is being unloaded while streaming - this will interrupt the response');
+            console.log('[CHAT.JS] Page is being unloaded while streaming - this will interrupt the response');
             // The browser will automatically abort the fetch request
         }
     });
 
     // --- Conversations ---
     async function loadConversations() {
-        const res = await fetch("/api/conversations", {
-            headers: { Authorization: "Bearer " + accessToken }
-        });
-        conversations = await res.json();
-        renderConvos();
+        console.log('[CHAT.JS] Loading conversations');
+        try {
+            const res = await fetch("/api/conversations", {
+                headers: { Authorization: "Bearer " + accessToken }
+            });
+            if (!res.ok) {
+                console.log('[CHAT.JS] Failed to load conversations, status:', res.status);
+                throw new Error(`HTTP ${res.status}`);
+            }
+            conversations = await res.json();
+            console.log('[CHAT.JS] Conversations loaded successfully, count:', conversations.length);
+            renderConvos();
+        } catch (error) {
+            console.log('[CHAT.JS] Error loading conversations:', error.message);
+        }
     }
 
     function renderConvos() {
+        console.log('[CHAT.JS] Rendering conversations, count:', conversations.length);
         convosDiv.innerHTML = '';
 
         // Remove the close button at the top (no longer needed)
@@ -384,11 +434,13 @@ document.addEventListener('DOMContentLoaded', function () {
         newChat.className = "new-chat-btn";
         newChat.onclick = (e) => {
             e.preventDefault();
+            console.log('[CHAT.JS] New chat button clicked');
             newConvo();
         };
         convosDiv.appendChild(newChat);
         convosDiv.appendChild(document.createElement("hr"));
         conversations.forEach(c => {
+            console.log('[CHAT.JS] Rendering conversation:', c.conversation_id, 'title:', c.title);
             const row = document.createElement("div");
             row.className = "convo-row";
             const a = document.createElement("a");
@@ -397,6 +449,7 @@ document.addEventListener('DOMContentLoaded', function () {
             a.className = (currentConvo === c.conversation_id) ? "selected" : "";
             a.onclick = (e) => {
                 e.preventDefault();
+                console.log('[CHAT.JS] Conversation clicked:', c.conversation_id);
                 navigateToConvo(c.conversation_id);
             };
             row.appendChild(a);
@@ -408,36 +461,52 @@ document.addEventListener('DOMContentLoaded', function () {
             renameBtn.onclick = async (e) => {
                 e.stopPropagation();
                 e.preventDefault();
+                console.log('[CHAT.JS] Rename button clicked for conversation:', c.conversation_id);
                 const newTitle = prompt("Enter new title:", c.title || "");
                 if (newTitle && newTitle !== c.title) {
-                    await fetch(`/api/conversations/${c.conversation_id}/title`, {
-                        method: "PUT",
-                        headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
-                        body: JSON.stringify(newTitle)
-                    });
-                    c.title = newTitle;
-                    renderConvos();
+                    console.log('[CHAT.JS] Renaming conversation from:', c.title, 'to:', newTitle);
+                    try {
+                        await fetch(`/api/conversations/${c.conversation_id}/title`, {
+                            method: "PUT",
+                            headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
+                            body: JSON.stringify(newTitle)
+                        });
+                        c.title = newTitle;
+                        renderConvos();
+                        console.log('[CHAT.JS] Conversation renamed successfully');
+                    } catch (error) {
+                        console.log('[CHAT.JS] Error renaming conversation:', error.message);
+                    }
                 }
             };
             row.appendChild(renameBtn);
 
             convosDiv.appendChild(row);
         });
+        console.log('[CHAT.JS] Conversations rendering completed');
     }
 
     function navigateToConvo(convoId) {
-        if (!convoId) return;
+        console.log('[CHAT.JS] Navigating to conversation:', convoId);
+        if (!convoId) {
+            console.log('[CHAT.JS] No conversation ID provided, skipping navigation');
+            return;
+        }
         history.pushState({ convoId }, "", `/chat/${convoId}`);
+        console.log('[CHAT.JS] History state updated, opening conversation');
         openConvo(convoId);
     }
 
     window.newConvo = async function () {
+        console.log('[CHAT.JS] New conversation function called');
         // Stop any background processing polling
         if (backgroundProcessingCheck) {
+            console.log('[CHAT.JS] Clearing background processing check interval');
             clearInterval(backgroundProcessingCheck);
             backgroundProcessingCheck = null;
         }
         
+        console.log('[CHAT.JS] Resetting conversation state');
         window.lastNonEmptyMessages = null;
         window.lastConversationId = null;
         messages = [];
@@ -446,16 +515,24 @@ document.addEventListener('DOMContentLoaded', function () {
         isStreaming = false;
 
         // Create chat without model selection
+        console.log('[CHAT.JS] Creating new chat without model selection');
         await createChatWithoutModel();
     };
 
     async function showModelSelectionModal() {
+        console.log('[CHAT.JS] Showing model selection modal');
         try {
             // Get model suggestions
+            console.log('[CHAT.JS] Fetching model suggestions');
             const suggestionsResponse = await fetch("/api/analytics/model-suggestions", {
                 headers: { Authorization: "Bearer " + accessToken }
             });
+            if (!suggestionsResponse.ok) {
+                console.log('[CHAT.JS] Failed to fetch model suggestions, status:', suggestionsResponse.status);
+                throw new Error(`HTTP ${suggestionsResponse.status}`);
+            }
             const suggestions = await suggestionsResponse.json();
+            console.log('[CHAT.JS] Model suggestions received:', suggestions);
             
             // Create modal
             const modal = document.createElement("div");
@@ -630,31 +707,40 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     function selectModel(modelId, card) {
+        console.log('[CHAT.JS] Model selected:', modelId);
         // Remove previous selection
         document.querySelectorAll('.model-card.selected').forEach(c => c.classList.remove('selected'));
         
         // Select new model
         card.classList.add('selected');
         window.selectedModelId = modelId;
+        console.log('[CHAT.JS] Model selection updated, selectedModelId:', window.selectedModelId);
         
         // Enable create button
         const createBtn = document.querySelector('.create-chat-btn');
         if (createBtn) {
             createBtn.disabled = false;
+            console.log('[CHAT.JS] Create chat button enabled');
         }
         
         // Enable start chat button
         const startBtn = document.querySelector('.start-chat-btn');
         if (startBtn) {
             startBtn.disabled = false;
+            console.log('[CHAT.JS] Start chat button enabled');
         }
     }
     
     async function createChatWithSelectedModel() {
-        if (!window.selectedModelId) return;
+        console.log('[CHAT.JS] Creating chat with selected model:', window.selectedModelId);
+        if (!window.selectedModelId) {
+            console.log('[CHAT.JS] No model selected, returning');
+            return;
+        }
         
         try {
             // Update the current conversation with the selected model
+            console.log('[CHAT.JS] Updating conversation with model ID');
             const res = await fetch(`/api/conversations/${currentConvo}`, {
                 method: "PUT",
                 headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
@@ -664,7 +750,9 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             
             if (res.ok) {
+                console.log('[CHAT.JS] Conversation updated successfully with model');
                 // Track usage for the selected model
+                console.log('[CHAT.JS] Tracking model usage');
                 await fetch("/api/analytics/usage", {
                     method: "POST",
                     headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
@@ -680,51 +768,76 @@ document.addEventListener('DOMContentLoaded', function () {
                 const modelSelectionInterface = document.querySelector('.model-selection-interface');
                 if (modelSelectionInterface) {
                     modelSelectionInterface.remove();
+                    console.log('[CHAT.JS] Model selection interface removed');
                 }
                 
                 // Refresh the conversation to show model info
+                console.log('[CHAT.JS] Refreshing conversation to show model info');
                 await openConvo(currentConvo);
+            } else {
+                console.log('[CHAT.JS] Failed to update conversation, status:', res.status);
             }
         } catch (error) {
-            console.error("Error updating conversation with model:", error);
+            console.log('[CHAT.JS] Error updating conversation with model:', error.message);
         }
     }
     
     async function createChatWithoutModel() {
-        const res = await fetch("/api/conversations", {
-            method: "POST",
-            headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                title: "New chat"
-            })
-        });
-        const convo = await res.json();
-        conversations.unshift(convo);
-        renderConvos();
-        if (convo.conversation_id) {
-            navigateToConvo(convo.conversation_id);
+        console.log('[CHAT.JS] Creating new chat without model');
+        try {
+            const res = await fetch("/api/conversations", {
+                method: "POST",
+                headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title: "New chat"
+                })
+            });
+            if (!res.ok) {
+                console.log('[CHAT.JS] Failed to create conversation, status:', res.status);
+                throw new Error(`HTTP ${res.status}`);
+            }
+            const convo = await res.json();
+            console.log('[CHAT.JS] New conversation created:', convo.conversation_id);
+            conversations.unshift(convo);
+            renderConvos();
+            if (convo.conversation_id) {
+                navigateToConvo(convo.conversation_id);
+            }
+        } catch (error) {
+            console.log('[CHAT.JS] Error creating new chat:', error.message);
         }
     }
 
     // --- Messages ---
     async function openConvo(convoId) {
-        if (!convoId) return;
+        console.log('[CHAT.JS] Opening conversation:', convoId);
+        if (!convoId) {
+            console.log('[CHAT.JS] No conversation ID provided, returning');
+            return;
+        }
         
         // Stop any background processing polling for the previous conversation
         if (backgroundProcessingCheck) {
+            console.log('[CHAT.JS] Clearing background processing check for previous conversation');
             clearInterval(backgroundProcessingCheck);
             backgroundProcessingCheck = null;
         }
         
         currentConvo = convoId;
+        console.log('[CHAT.JS] Current conversation set to:', currentConvo);
         renderConvos();
 
+        console.log('[CHAT.JS] Resetting conversation state');
         window.lastNonEmptyMessages = null;
         window.lastConversationId = null;
 
         // Preserve the current prompt if we're stopping a stream
         const currentPrompt = isStoppingStream ? promptInput.innerText : null;
+        if (isStoppingStream) {
+            console.log('[CHAT.JS] Preserving current prompt during stream stop');
+        }
 
+        console.log('[CHAT.JS] Fetching conversation data');
         const [branchMsgs, convo] = await Promise.all([
             fetch(`/api/conversations/${convoId}/messages`, {
                 headers: { Authorization: "Bearer " + accessToken }
@@ -735,40 +848,51 @@ document.addEventListener('DOMContentLoaded', function () {
         ]);
 
         messages = branchMsgs;
+        console.log('[CHAT.JS] Messages loaded, count:', messages.length);
         currentLeaf = convo.current_leaf_message_id || (messages.length ? messages[messages.length - 1].message_id : null);
+        console.log('[CHAT.JS] Current leaf message ID:', currentLeaf);
 
         // Get model information if available
         let modelInfo = null;
         if (convo.model_id) {
+            console.log('[CHAT.JS] Fetching model info for model ID:', convo.model_id);
             try {
                 const modelResponse = await fetch(`/api/models/${convo.model_id}`, {
                     headers: { Authorization: "Bearer " + accessToken }
                 });
                 if (modelResponse.ok) {
                     modelInfo = await modelResponse.json();
+                    console.log('[CHAT.JS] Model info loaded:', modelInfo.name);
+                } else {
+                    console.log('[CHAT.JS] Failed to fetch model info, status:', modelResponse.status);
                 }
             } catch (error) {
-                console.error("Error fetching model info:", error);
+                console.log('[CHAT.JS] Error fetching model info:', error.message);
             }
+        } else {
+            console.log('[CHAT.JS] No model ID in conversation');
         }
         window.currentModelInfo = modelInfo;
 
         // Check if there's ongoing background processing for this conversation
+        console.log('[CHAT.JS] Checking background processing status');
         try {
             // Skip background processing check if resume streaming just completed
             if (resumeStreamingCompleted) {
-                console.log("Resume streaming completed, skipping background processing check");
+                console.log('[CHAT.JS] Resume streaming completed, skipping background processing check');
                 resumeStreamingCompleted = false; // Reset flag
                 tempUserMsg = null;
                 tempAssistantMsg = null;
             } else {
+                console.log('[CHAT.JS] Fetching processing status');
                 const processingStatus = await fetch(`/api/conversations/${convoId}/processing-status`, {
                     headers: { Authorization: "Bearer " + accessToken }
                 });
                 const status = await processingStatus.json();
+                console.log('[CHAT.JS] Processing status:', status);
                 
                 if (status.processing) {
-                    console.log("Detected ongoing background processing, starting real-time streaming");
+                    console.log('[CHAT.JS] Detected ongoing background processing, starting real-time streaming');
                     // Create a temporary assistant message to show background processing
                     tempAssistantMsg = { 
                         role: "assistant", 
@@ -778,7 +902,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Start real-time streaming instead of polling
                     startResumeStreaming();
                 } else {
-                    console.log("No background processing detected, loading conversation normally");
+                    console.log('[CHAT.JS] No background processing detected, loading conversation normally');
                     // No background processing - load the conversation normally
                     // Clear any temporary messages
                     tempUserMsg = null;
@@ -787,7 +911,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Check if the last message is a user message without a corresponding assistant message
                     // This indicates an interrupted stream that wasn't handled by background processing
                     if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
-                        console.log("Detected interrupted stream - last message is user message");
+                        console.log('[CHAT.JS] Detected interrupted stream - last message is user message');
                         // Create a temporary assistant message to show "Response in progress..."
                         tempAssistantMsg = { 
                             role: "assistant", 
@@ -798,10 +922,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         } catch (error) {
-            console.error("Error checking background processing status:", error);
+            console.log('[CHAT.JS] Error checking background processing status:', error.message);
             // Fallback to the original logic
             if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
-                console.log("Detected interrupted stream - last message is user message");
+                console.log('[CHAT.JS] Fallback: Detected interrupted stream - last message is user message');
                 tempAssistantMsg = { 
                     role: "assistant", 
                     content: "*[Response was interrupted - you can continue the conversation]*",
@@ -814,25 +938,34 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         isStreaming = false;
+        console.log('[CHAT.JS] Streaming state reset to false');
 
+        console.log('[CHAT.JS] Rendering messages');
         renderMessages();
         // promptForm.style.display = "block";
         
         // Restore the prompt if we were stopping a stream
         if (isStoppingStream && currentPrompt) {
+            console.log('[CHAT.JS] Restoring prompt after stream stop');
             promptInput.innerText = currentPrompt;
         }
+        
+        isStoppingStream = false;
+        console.log('[CHAT.JS] Conversation opened successfully');
     }
 
     function renderMessages() {
+        console.log('[CHAT.JS] Rendering messages, count:', messages.length, 'streaming:', isStreaming);
         const wasAtBottom = messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - 10;
         messagesDiv.innerHTML = "";
         if (!messages.length && isStreaming && window.lastNonEmptyMessages && window.lastConversationId === currentConvo) {
+            console.log('[CHAT.JS] Restoring last non-empty messages during streaming');
             messages = window.lastNonEmptyMessages;
         }
         if (messages.length) {
             window.lastNonEmptyMessages = [...messages];
             window.lastConversationId = currentConvo;
+            console.log('[CHAT.JS] Updated last non-empty messages, count:', window.lastNonEmptyMessages.length);
         }
         
         // Show placeholder message for new chats
@@ -1080,28 +1213,38 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function sendPromptStream(prompt) {
-        if (!prompt || !currentConvo) return;
+        console.log('[CHAT.JS] sendPromptStream called with prompt length:', prompt?.length, 'conversation:', currentConvo);
+        if (!prompt || !currentConvo) {
+            console.log('[CHAT.JS] Missing prompt or conversation ID, returning');
+            return;
+        }
         
         // Reset the stopping flag when starting a new stream
         isStoppingStream = false;
+        console.log('[CHAT.JS] Reset stopping flag, starting new stream');
         
         // Only clear the prompt input if we're not stopping a stream
         if (!isStoppingStream) {
             promptInput.innerHTML = "";
+            console.log('[CHAT.JS] Cleared prompt input');
         }
 
         let parent_message_id = null;
+        console.log('[CHAT.JS] Parent message ID:', parent_message_id);
 
         tempUserMsg = { role: "user", content: prompt, parent_message_id };
         tempAssistantMsg = { role: "assistant", content: "", parent_message_id: null };
         isStreaming = true;
+        console.log('[CHAT.JS] Created temporary messages, streaming set to true');
         updateSendButtonState();
         renderMessages(); // Render once at the start
 
         // Create new AbortController for this request
         currentAbortController = new AbortController();
+        console.log('[CHAT.JS] Created new AbortController for stream request');
 
         try {
+            console.log('[CHAT.JS] Sending stream request to API');
             const response = await fetch(`/api/conversations/${currentConvo}/messages/stream`, {
                 method: "POST",
                 headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
@@ -1109,27 +1252,42 @@ document.addEventListener('DOMContentLoaded', function () {
                 signal: currentAbortController.signal
             });
 
+            if (!response.ok) {
+                console.log('[CHAT.JS] Stream request failed, status:', response.status);
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            console.log('[CHAT.JS] Stream request successful, starting to read response');
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = "";
             let shouldReload = false;
+            console.log('[CHAT.JS] Stream reader and decoder initialized');
             while (true) {
                 const { value, done } = await reader.read();
-                if (done) break;
+                if (done) {
+                    console.log('[CHAT.JS] Stream reading completed');
+                    break;
+                }
                 buffer += decoder.decode(value, { stream: true });
                 let parts = buffer.split("\n\n");
                 buffer = parts.pop();
+                console.log('[CHAT.JS] Processing stream parts, count:', parts.length);
                 for (const part of parts) {
                     if (part.startsWith("data: ")) {
                         const token = part.slice(6);
-                        if (token === "[DONE]" || token === "[INTERRUPTED]") break;
+                        console.log('[CHAT.JS] Processing token:', token.substring(0, 50) + (token.length > 50 ? '...' : ''));
+                        if (token === "[DONE]" || token === "[INTERRUPTED]") {
+                            console.log('[CHAT.JS] Received stream end signal:', token);
+                            break;
+                        }
                         if (token === "[SAVED]") {
-                            console.log("Received [SAVED] signal from backend, reloading conversation");
+                            console.log('[CHAT.JS] Received [SAVED] signal from backend, reloading conversation');
                             shouldReload = true;
                             break;
                         }
                         if (token === "[CONTINUING_IN_BACKGROUND]") {
-                            console.log("Received [CONTINUING_IN_BACKGROUND] signal - response will be completed in background");
+                            console.log('[CHAT.JS] Received [CONTINUING_IN_BACKGROUND] signal - response will be completed in background');
                             tempAssistantMsg.content += "\n\n*[Response will be completed in background]*";
                             renderMessages();
                             shouldReload = true;
@@ -1143,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             const parsedToken = JSON.parse(token);
                             if (parsedToken.message && parsedToken.message.title) {
                                 // This is a title message - update the conversation title
-                                console.log("Received title:", parsedToken.message.title);
+                                console.log('[CHAT.JS] Received title:', parsedToken.message.title);
                                 const currentConvoObj = conversations.find(c => c.conversation_id === currentConvo);
                                 if (currentConvoObj) {
                                     currentConvoObj.title = parsedToken.message.title;
@@ -1156,29 +1314,36 @@ document.addEventListener('DOMContentLoaded', function () {
                                         body: JSON.stringify({ title: parsedToken.message.title })
                                     }).then(res => {
                                         if (res.ok) {
-                                            console.log("Title saved to database");
+                                            console.log('[CHAT.JS] Title saved to database');
                                         } else {
-                                            console.error("Failed to save title to database");
+                                            console.log('[CHAT.JS] Failed to save title to database, status:', res.status);
                                         }
                                     }).catch(err => {
-                                        console.error("Error saving title:", err);
+                                        console.log('[CHAT.JS] Error saving title:', err.message);
                                     });
                                 }
                                 continue; // Skip adding this to the assistant message content
                             }
                         } catch (e) {
                             // Not a JSON object, treat as regular token
+                            console.log('[CHAT.JS] Token is not JSON, treating as regular token');
                         }
                         
                         // Regular token - add to assistant message
-                        tempAssistantMsg.content += JSON.parse(token);
-                        const streamingContent = document.getElementById('streaming-content');
-                        if (streamingContent) {
-                            const isAtBottom = messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - 10;
-                            streamingContent.innerHTML = marked.parse(tempAssistantMsg.content);
-                            if (isAtBottom) {
-                                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                        try {
+                            const parsedToken = JSON.parse(token);
+                            tempAssistantMsg.content += parsedToken;
+                            console.log('[CHAT.JS] Added token to assistant message, content length:', tempAssistantMsg.content.length);
+                            const streamingContent = document.getElementById('streaming-content');
+                            if (streamingContent) {
+                                const isAtBottom = messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - 10;
+                                streamingContent.innerHTML = marked.parse(tempAssistantMsg.content);
+                                if (isAtBottom) {
+                                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                                }
                             }
+                        } catch (parseError) {
+                            console.log('[CHAT.JS] Error parsing token as JSON:', parseError.message, 'token:', token);
                         }
                     }
                 }
@@ -1186,29 +1351,34 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         } catch (error) {
             if (error.name === 'AbortError') {
-                console.log('Stream was aborted by user');
+                console.log('[CHAT.JS] Stream was aborted by user');
                 if (tempAssistantMsg && tempAssistantMsg.content) {
                     tempAssistantMsg.content += "\n\n*[Response stopped by user]*";
                     renderMessages();
                     // Fallback: save the partial response directly to DB
+                    console.log('[CHAT.JS] Saving partial response after abort');
                     await savePartialResponse(tempAssistantMsg.content);
                 }
             } else {
-                console.error('Stream error:', error);
+                console.log('[CHAT.JS] Stream error:', error.message);
             }
         } finally {
+            console.log('[CHAT.JS] Stream finally block - cleaning up');
             isStreaming = false;
             currentAbortController = null;
             updateSendButtonState();
             if (isStoppingStream) {
+                console.log('[CHAT.JS] Stream was stopped, keeping partial response');
                 // Don't clear tempAssistantMsg, keep the partial response
             } else {
+                console.log('[CHAT.JS] Stream completed normally, clearing temporary messages');
                 tempUserMsg = null;
                 tempAssistantMsg = null;
                 await openConvo(currentConvo);
             }
             editingMsgId = null;
             editingMsgIdx = null;
+            console.log('[CHAT.JS] Stream cleanup completed');
         }
     }
 
@@ -1222,14 +1392,20 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     promptForm.onsubmit = async (e) => {
+        console.log('[CHAT.JS] Form submission triggered');
         e.preventDefault();
         if (isStreaming) {
+            console.log('[CHAT.JS] Currently streaming, stopping stream instead of submitting');
             // If streaming, stop the stream instead of submitting
             stopStream();
             return;
         }
         const prompt = promptInput.innerText.trim();
-        if (!prompt) return;
+        console.log('[CHAT.JS] Form submitted with prompt length:', prompt.length);
+        if (!prompt) {
+            console.log('[CHAT.JS] Empty prompt, ignoring submission');
+            return;
+        }
         await sendPromptStream(prompt);
         // promptInput.innerHTML = '';
     };
@@ -1467,77 +1643,95 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to stop the current stream
     function stopStream() {
+        console.log('[CHAT.JS] stopStream called');
         if (currentAbortController) {
-            console.log("Stopping stream...");
+            console.log('[CHAT.JS] Stopping stream...');
             isStoppingStream = true;
             const currentPrompt = promptInput.innerText;
-            console.log("Preserved prompt:", currentPrompt);
+            console.log('[CHAT.JS] Preserved prompt:', currentPrompt);
             currentAbortController.abort();
             // No setTimeout or reload here; reload will be triggered by [SAVED] event
             promptInput.innerText = currentPrompt;
+            console.log('[CHAT.JS] Stream stop initiated');
+        } else {
+            console.log('[CHAT.JS] No current AbortController found for stopping');
         }
     }
 
     async function savePartialResponse(response) {
+        console.log('[CHAT.JS] savePartialResponse called with content length:', response?.length);
         try {
-            console.log("Saving partial response directly to DB");
+            console.log('[CHAT.JS] Saving partial response directly to DB');
             const res = await fetch(`/api/conversations/${currentConvo}/partial-response`, {
                 method: "POST",
                 headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
                 body: JSON.stringify({ content: response })
             });
             if (res.ok) {
-                console.log("Partial response saved successfully");
+                console.log('[CHAT.JS] Partial response saved successfully');
                 // Reload conversation to show the saved response
                 await openConvo(currentConvo);
             } else {
-                console.error("Failed to save partial response");
+                console.log('[CHAT.JS] Failed to save partial response, status:', res.status);
             }
         } catch (error) {
-            console.error("Error saving partial response:", error);
+            console.log('[CHAT.JS] Error saving partial response:', error.message);
         }
     }
 
     // Function to check if background processing is complete
     async function checkBackgroundProcessing() {
-        if (!currentConvo) return;
+        console.log('[CHAT.JS] checkBackgroundProcessing called');
+        if (!currentConvo) {
+            console.log('[CHAT.JS] No current conversation, returning');
+            return;
+        }
         
         try {
+            console.log('[CHAT.JS] Fetching processing status');
             const response = await fetch(`/api/conversations/${currentConvo}/processing-status`, {
                 headers: { Authorization: "Bearer " + accessToken }
             });
             const status = await response.json();
+            console.log('[CHAT.JS] Processing status:', status);
             
             if (!status.processing) {
                 // Background processing is complete, reload the conversation
-                console.log("Background processing complete, reloading conversation");
+                console.log('[CHAT.JS] Background processing complete, reloading conversation');
                 clearInterval(backgroundProcessingCheck);
                 backgroundProcessingCheck = null;
                 await openConvo(currentConvo);
             } else {
                 // Background processing is still active, start real-time streaming
+                console.log('[CHAT.JS] Background processing still active, starting resume streaming');
                 startResumeStreaming();
             }
         } catch (error) {
-            console.error("Error checking background processing status:", error);
+            console.log('[CHAT.JS] Error checking background processing status:', error.message);
         }
     }
 
     // Function to start real-time streaming for resumed conversation
     async function startResumeStreaming() {
-        if (!currentConvo) return;
+        console.log('[CHAT.JS] startResumeStreaming called');
+        if (!currentConvo) {
+            console.log('[CHAT.JS] No current conversation, returning');
+            return;
+        }
         
         try {
-            console.log("Starting resume streaming...");
+            console.log('[CHAT.JS] Starting resume streaming...');
             
             // First check if the response is already complete
+            console.log('[CHAT.JS] Checking if background processing is already complete');
             const statusResponse = await fetch(`/api/conversations/${currentConvo}/processing-status`, {
                 headers: { Authorization: "Bearer " + accessToken }
             });
             const status = await statusResponse.json();
+            console.log('[CHAT.JS] Initial processing status:', status);
             
             if (!status.processing) {
-                console.log("Background processing already completed, reloading conversation");
+                console.log('[CHAT.JS] Background processing already completed, reloading conversation');
                 clearInterval(backgroundProcessingCheck);
                 backgroundProcessingCheck = null;
                 await openConvo(currentConvo);
@@ -1545,6 +1739,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             
             // Create temporary assistant message to show streaming
+            console.log('[CHAT.JS] Creating temporary assistant message for resume streaming');
             tempAssistantMsg = { 
                 role: "assistant", 
                 content: "*[Resuming response...]*",
@@ -1552,21 +1747,30 @@ document.addEventListener('DOMContentLoaded', function () {
             };
             renderMessages();
             
+            console.log('[CHAT.JS] Sending resume stream request');
+            console.log('[CHAT.JS] Current conversation ID:', currentConvo);
+            console.log('[CHAT.JS] Access token available:', !!accessToken);
+            console.log('[CHAT.JS] Access token length:', accessToken?.length);
             const response = await fetch(`/api/conversations/${currentConvo}/resume-stream`, {
                 method: "POST",
                 headers: { Authorization: "Bearer " + accessToken }
             });
             
+            console.log('[CHAT.JS] Resume stream response status:', response.status);
             if (!response.ok) {
-                console.log("No resume streaming available");
+                console.log('[CHAT.JS] Resume stream request failed, status:', response.status);
+                const errorText = await response.text();
+                console.log('[CHAT.JS] Error response text:', errorText);
                 // If resume streaming fails, check if it's because processing is complete
+                console.log('[CHAT.JS] Checking if processing completed while trying to resume');
                 const finalStatusResponse = await fetch(`/api/conversations/${currentConvo}/processing-status`, {
                     headers: { Authorization: "Bearer " + accessToken }
                 });
                 const finalStatus = await finalStatusResponse.json();
+                console.log('[CHAT.JS] Final processing status:', finalStatus);
                 
                 if (!finalStatus.processing) {
-                    console.log("Background processing completed while trying to resume, reloading conversation");
+                    console.log('[CHAT.JS] Background processing completed while trying to resume, reloading conversation');
                     clearInterval(backgroundProcessingCheck);
                     backgroundProcessingCheck = null;
                     await openConvo(currentConvo);
@@ -1575,16 +1779,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 
                 // If we get a 400 error and processing is still active, it might be a race condition
                 if (response.status === 400) {
-                    console.log("Resume-stream returned 400 - checking if this is a race condition");
+                    console.log('[CHAT.JS] Resume-stream returned 400 - checking if this is a race condition');
                     // Wait a moment and check again
+                    console.log('[CHAT.JS] Waiting 1 second before retry');
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     const retryStatusResponse = await fetch(`/api/conversations/${currentConvo}/processing-status`, {
                         headers: { Authorization: "Bearer " + accessToken }
                     });
                     const retryStatus = await retryStatusResponse.json();
+                    console.log('[CHAT.JS] Retry processing status:', retryStatus);
                     
                     if (!retryStatus.processing) {
-                        console.log("Background processing completed during retry, reloading conversation");
+                        console.log('[CHAT.JS] Background processing completed during retry, reloading conversation');
                         clearInterval(backgroundProcessingCheck);
                         backgroundProcessingCheck = null;
                         await openConvo(currentConvo);
@@ -1595,31 +1801,34 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             
-            console.log("Resume streaming connected successfully");
+            console.log('[CHAT.JS] Resume streaming connected successfully');
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = "";
             let updateCount = 0;
+            console.log('[CHAT.JS] Resume stream reader and decoder initialized');
             
             // Clear the temporary message and start fresh
             tempAssistantMsg.content = "";
+            console.log('[CHAT.JS] Cleared temporary assistant message content');
             
             while (true) {
                 const { value, done } = await reader.read();
                 if (done) {
-                    console.log("Resume streaming ended");
+                    console.log('[CHAT.JS] Resume streaming ended');
                     break;
                 }
                 
                 buffer += decoder.decode(value, { stream: true });
                 let parts = buffer.split("\n\n");
                 buffer = parts.pop();
+                console.log('[CHAT.JS] Resume stream processing parts, count:', parts.length);
                 
                 for (const part of parts) {
                     if (part.startsWith("data: ")) {
                         const token = part.slice(6);
                         if (token === "[DONE]") {
-                            console.log("Resume streaming completed");
+                            console.log('[CHAT.JS] Resume streaming completed');
                             clearInterval(backgroundProcessingCheck);
                             backgroundProcessingCheck = null;
                             resumeStreamingCompleted = true; // Mark as completed
@@ -1630,7 +1839,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             return;
                         }
                         if (token === "[ERROR]") {
-                            console.log("Resume streaming error");
+                            console.log('[CHAT.JS] Resume streaming error');
                             clearInterval(backgroundProcessingCheck);
                             backgroundProcessingCheck = null;
                             resumeStreamingCompleted = true; // Mark as completed
@@ -1725,37 +1934,50 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to start polling for background processing completion
     function startBackgroundProcessingPolling() {
+        console.log('[CHAT.JS] startBackgroundProcessingPolling called');
         if (backgroundProcessingCheck) {
+            console.log('[CHAT.JS] Clearing existing background processing check interval');
             clearInterval(backgroundProcessingCheck);
         }
         // Start real-time streaming immediately instead of polling
+        console.log('[CHAT.JS] Starting resume streaming immediately');
         startResumeStreaming();
         // Keep a minimal fallback polling mechanism just in case
         backgroundProcessingCheck = setInterval(checkBackgroundProcessing, 10000); // Check every 10 seconds as fallback
+        console.log('[CHAT.JS] Set up fallback polling interval (10 seconds)');
         showStatus("Resuming response in real-time...", "processing");
     }
 
     // Function to show status messages
     function showStatus(message, type = "info") {
+        console.log('[CHAT.JS] showStatus called:', message, 'type:', type);
         statusEl.textContent = message;
         statusEl.className = `show ${type}`;
         setTimeout(() => {
             statusEl.classList.remove('show');
+            console.log('[CHAT.JS] Status message hidden after 5 seconds');
         }, 5000);
     }
 
     function showModelDetails(modelId) {
+        console.log('[CHAT.JS] showModelDetails called for model ID:', modelId);
         // Find the model data from the suggestions
         let model = null;
         for (const category of ['trending', 'used', 'new', 'recommended']) {
             const section = window.modelSuggestions[category];
             if (section) {
                 model = section.find(m => m.model_id === modelId);
-                if (model) break;
+                if (model) {
+                    console.log('[CHAT.JS] Found model in category:', category);
+                    break;
+                }
             }
         }
         
-        if (!model) return;
+        if (!model) {
+            console.log('[CHAT.JS] Model not found in suggestions');
+            return;
+        }
         
         const modal = document.createElement('div');
         modal.className = 'modal show';
@@ -1775,5 +1997,11 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
         document.body.appendChild(modal);
         modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        console.log('[CHAT.JS] Model details modal created and displayed');
     }
+
+    // Initialize the application
+    console.log('[CHAT.JS] Starting application initialization');
+    autoLogin();
+    console.log('[CHAT.JS] Application initialization completed');
 });

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 """
 Script to add test models to the database for testing analytics
 """
@@ -11,7 +12,7 @@ from datetime import datetime, timedelta
 async def add_test_models():
     # Connect to database using the provided connection string
     pool = await asyncpg.create_pool(
-        "postgresql://chassis_user:randomsecurepassword45219@localhost/chassis_ui"
+        os.environ.get("DATABASE_URL", "postgresql://chassis_user:@localhost/chassis_ui")
     )
     
     async with pool.acquire() as conn:
